@@ -168,7 +168,38 @@ rclone rmdirs hbox-main:recordings --leave-root
 
 ---
 
-## 5. Recording format: BVR vs MP4
+## 5. Azure and Google Cloud compared
+
+**Neither is cheaper at 76 GB/day.**
+- **Azure Archive** costs the same as AWS Deep Archive.
+- **Google Archive** costs more because of its 365-day minimum.
+
+Each file is billed for the longer of its retention and the tier's minimum period.
+
+| Provider / tier | $/GB-month | Minimum billed | Monthly cost | Getting footage back |
+|---|---|---|---|---|
+| **AWS Glacier Deep Archive** | $0.00099 | 180 days | **$13.50** | ~12 hr restore |
+| **Azure Archive** (LRS) | $0.00099 | 180 days | **$13.50** | Up to ~15 hr (faster restore costs more) |
+| Azure Cold | $0.0036–0.0045 | 90 days | $25–31 | Instant |
+| Azure Cool (keep 30 days) | $0.010–0.015 | 30 days | $23–35 | Instant |
+| Google Nearline (keep 30 days) | ~$0.011 | 30 days | ~$25 | Instant (~$0.01/GB to read) |
+| Google Coldline | ~$0.0044 | 90 days | ~$30 | Instant (~$0.02/GB to read) |
+| Google Archive | ~$0.0012 | **365 days** | ~$33 | Instant, but ~$0.05/GB to read |
+| **Hetzner Storage Box 5 TB** (≤ 60 days) | flat | none | **~€10.90** | Instant, no fees |
+
+Notes:
+- **Azure Archive** works just like AWS Deep Archive. Choose it only if you already use or prefer Azure. rclone flag: `--azureblob-access-tier archive`.
+- **Google Archive** has no restore wait, but you pay for 365 days (~$33/month). That's only worth it if you'd actually keep a full year of footage.
+- **Azure Cool** may beat AWS Standard-IA for 30 days of instant access (~$23 vs $28.50), but the Hetzner Storage Box is cheaper still.
+- **Download costs:** Google is ~$0.12/GB vs ~$0.09/GB on AWS and Azure. Negligible for emergency-only access.
+
+**Bottom line:** Hetzner Storage Box for ≤ 60 days with instant access, or AWS Deep Archive (or Azure Archive) for 180 days emergency-only.
+
+> Sources for the Azure and Google rates disagree in places, so ranges are shown. Check the [Azure pricing](https://azure.microsoft.com/en-us/pricing/details/storage/blobs/) and [Google Cloud Storage pricing](https://cloud.google.com/storage/pricing) pages for your region before deciding.
+
+---
+
+## 6. Recording format: BVR vs MP4
 
 - **BVR** is Blue Iris's proprietary format. There's no reliable Mac player; VLC and ffmpeg are hit-or-miss.
 - **Switch to MP4** (Camera settings → Record → file format) and keep **direct-to-disc** on.
@@ -200,7 +231,7 @@ Solutions:
 
 ---
 
-## 6. Optional: hidden recorder / backup box with 10 TB
+## 7. Optional: hidden recorder / backup box with 10 TB
 
 A 10 TB drive holds about **4 months** of local footage at 76 GB/day. Most mini PCs only fit 2.5"/M.2 drives, so:
 
@@ -224,7 +255,7 @@ A 10 TB drive holds about **4 months** of local footage at 76 GB/day. Most mini 
 
 ---
 
-## 7. Next steps
+## 8. Next steps
 - [ ] Decide on the cloud target: AWS Deep Archive (180 days, emergency-only) or Hetzner Storage Box (≤ 60 days, instant access).
 - [ ] Decide: is the hidden PC the recorder, or a backup target?
 - [ ] Turn on camera OSD timestamps + NTP on all cameras.
