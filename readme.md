@@ -108,7 +108,67 @@ rclone copy "D:\BlueIris\New" s3cam:my-bi-bucket/recordings ^
 
 ---
 
-## 4. Recording format: BVR vs MP4
+## 4. Alternative: Hetzner Storage Box
+
+A [Hetzner Storage Box](https://www.hetzner.com/storage/storage-box/) is storage you rent without a server. It's a flat monthly price with **unlimited traffic** and no retrieval fees, and it works with rclone over SFTP. There's no need to attach a disk to a server.
+
+### Hetzner options compared (76 GB/day)
+
+| Option | Price (excl. VAT) | Verdict |
+|---|---|---|
+| Cloud Volume attached to an existing server (e.g. the website box) | Roughly €0.04–0.05/GB-month historically (current rate unconfirmed), ≈ **€100/month for 30 days of footage** | ❌ Most expensive; mixes footage with a public web server |
+| **Storage Box** | 5 TB **€10.90** · 10 TB **€20.80** · 20 TB **€40.60** | ✅ Best for ≤ ~60 days with instant access |
+| Object Storage (S3-compatible) | €6.49 incl. 1 TB, then ≈ €5/TB | ≈ €13/month for 30 days |
+
+### Storage Box vs AWS Deep Archive
+
+| Keep for | Data | Storage Box | AWS Deep Archive |
+|---|---|---|---|
+| 30 days | 2.3 TB | €10.90 (5 TB) | $13.50 (billed for at least 180 days) |
+| **60 days** | 4.6 TB | **€10.90 (5 TB)** ✅ | $13.50 |
+| ~120 days | 9–10 TB | €20.80 (10 TB) | $13.50 |
+| 180 days | 13.7 TB | €40.60 (20 TB) | **$13.50** ✅ |
+
+- **Storage Box wins at ~60 days or less.** You can view or download footage instantly, with no restore wait and no fees.
+- **Deep Archive wins for long, emergency-only history.**
+
+### Downsides
+1. **No lifecycle rules.** Old files have to be deleted by a scheduled cleanup command.
+2. **Locations: Germany and Finland only.** A steady ~7 Mbps upload is fine from anywhere; use `--transfers 4` to keep up over a long-distance link.
+3. **Weaker tamper protection than S3** with versioning and Object Lock. Mitigate with:
+   - Automatic snapshots (they use space inside the box).
+   - Separate logins (sub-accounts) for uploading and for cleanup, so a compromised home PC can't wipe the backups.
+
+### Setup sketch
+1. Order a **BX21 (5 TB)** and turn on SSH/SFTP access.
+2. Create a sub-account (e.g. `uXXXXX-sub1`) for the Blue Iris uploader.
+3. On Windows, `rclone config` → new **SFTP** remote (e.g. `hbox`):
+   - host `uXXXXX-sub1.your-storagebox.de`
+   - port `23`
+   - key-based auth
+4. Task Scheduler job every 5–10 minutes:
+
+```bat
+rclone copy "D:\BlueIris\New" hbox:recordings ^
+  --min-age 2m --transfers 4 --bwlimit 4M ^
+  --log-file C:\rclone\upload.log --log-level INFO
+```
+
+5. Nightly cleanup, run from a different machine (e.g. the website server, via cron) using the main account:
+
+```sh
+# delete footage older than 60 days, then remove empty folders
+rclone delete hbox-main:recordings --min-age 60d
+rclone rmdirs hbox-main:recordings --leave-root
+```
+
+6. Optional: turn on automatic snapshots as a safety net.
+
+> Prices from Hetzner's site as of late 2026. Check current pricing and your VAT before ordering.
+
+---
+
+## 5. Recording format: BVR vs MP4
 
 - **BVR** is Blue Iris's proprietary format. There's no reliable Mac player; VLC and ffmpeg are hit-or-miss.
 - **Switch to MP4** (Camera settings → Record → file format) and keep **direct-to-disc** on.
@@ -140,7 +200,7 @@ Solutions:
 
 ---
 
-## 5. Optional: hidden recorder / backup box with 10 TB
+## 6. Optional: hidden recorder / backup box with 10 TB
 
 A 10 TB drive holds about **4 months** of local footage at 76 GB/day. Most mini PCs only fit 2.5"/M.2 drives, so:
 
@@ -164,7 +224,8 @@ A 10 TB drive holds about **4 months** of local footage at 76 GB/day. Most mini 
 
 ---
 
-## 6. Next steps
+## 7. Next steps
+- [ ] Decide on the cloud target: AWS Deep Archive (180 days, emergency-only) or Hetzner Storage Box (≤ 60 days, instant access).
 - [ ] Decide: is the hidden PC the recorder, or a backup target?
 - [ ] Turn on camera OSD timestamps + NTP on all cameras.
 - [ ] Switch all cameras to MP4 + direct-to-disc.
